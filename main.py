@@ -62,7 +62,7 @@ YUCE_PATTERN = r"预测|前景|趋势|走势|成败|能不能成|能不能过|�
 YUNCHOU_PATTERN = r"运筹|择吉|哪个方向|什么方向|往哪|去哪方向|选什么方向|出行方向|策略|行动方案|该怎么做|宜动|宜守|方位吉|哪个方位"
 FENGSHUI_PATTERN = r"风水|布局|办公室|办公位|座位|朝向|环境|摆设|装修|选址|店铺位置|房子|宅|阴宅|阳宅|煞气|财位"
 SHIREN_PATTERN = r"识人|看人|性格|人品|才能|合作伙伴|这个人怎样|对方|识人术|用人|下属|领导怎样|对象人品|合伙人"
-ZHEXUE_PATTERN = r"哲学|易理|启示|感悟|道理|智慧|人生|修行|心法|开悟|启迪|哲理|天人合一|道|无为"
+ZHEXUE_PATTERN = r"哲学|易理|启示|感悟|道理|智慧|人生|修行|心法|开悟|启迪|哲理|天人合一|大道|天道|道法|悟道|修道|问道|论道|得道|道学|传道|求道|道可道|无为"
 
 _YUCE_RE = re.compile(YUCE_PATTERN)
 _YUNCHOU_RE = re.compile(YUNCHOU_PATTERN)
@@ -450,7 +450,7 @@ def build_zeri_report(result, show_disclaimer=True):
     "astrbot_plugin_qimen",
     "qimen_dev",
     "奇门遁甲断卦：起局排盘，判吉凶、预测、运筹、风水、识人、哲理、择日",
-    "1.0.0",
+    "1.0.1",
     "",
 )
 class QimenPlugin(Star):
