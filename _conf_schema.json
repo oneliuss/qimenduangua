@@ -12,6 +12,19 @@
     "options": ["modern", "classic"],
     "hint": "modern=白话实操（易懂）；classic=古法直断（偏文言，贴近古籍口吻）"
   },
+  "output_mode": {
+    "description": "输出形态",
+    "type": "string",
+    "default": "text",
+    "options": ["text", "image", "both"],
+    "hint": "text=纯文字（默认）；image=排盘图+报告图片；both=图片+文字都发。图片生成失败时自动回退纯文字"
+  },
+  "enable_chart_image": {
+    "description": "附九宫排盘图",
+    "type": "bool",
+    "default": true,
+    "hint": "output_mode 为 image/both 时，是否额外发送九宫格排盘图（择日模块无排盘图）"
+  },
   "enable_duangua": {
     "description": "启用【断卦】模块",
     "type": "bool",

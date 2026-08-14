@@ -2,6 +2,6 @@ name: astrbot_plugin_qimen
 desc: 奇门遁甲断卦插件：根据用户问题和当前时间起局排盘，按古法给出吉凶判断与实操建议。
 author: qimen_dev
 repo: ""
-version: 1.0.1
+version: 1.1.0
 icon: ""
 license: GPL-3.0

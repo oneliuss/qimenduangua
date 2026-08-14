@@ -26,6 +26,7 @@
 - **应期推断**：空待填实、伏待冲、旺待墓、衰待生、临马看值马之期、空亡看转宫。
 - **自然语言触发**：含「奇门/遁甲/起局/排局」等意图即识别并自动提取问题。
 - **图形化配置**：通过 `_conf_schema.json` 声明配置，AstrBot 管理面板自动渲染为下拉框与开关界面。
+- **图片化输出**：可将排盘信息绘制成九宫格图例（玄黑金风格），并把排盘图与文字报告合并为一张长图发送；配置 output_mode 三档切换，失败自动回退纯文字。
 
 ---
 
@@ -43,12 +44,23 @@ data/plugins/astrbot_plugin_qimen/
 ├── qimen_fengshui.py  风水模块（环境方位/吉凶方位/布局）
 ├── qimen_shiren.py    识人模块（性格/才能/关系/用人）
 ├── qimen_zhexue.py    哲学模块（易理/格局之智/人生启示）
+├── qimen_chart.py     九宫排盘图绘制（Pillow，玄黑金风格）
+├── qimen_image.py     报告转图片管线（html_render 优先，本地 Pillow 兜底）
 ├── qimen_data.py      奇门遁甲静态数据
 ├── metadata.yaml      插件元数据
 └── _conf_schema.json  配置项定义
 ```
 
 随后在 AstrBot 管理面板「插件管理」中重载插件，或重启 AstrBot 即可生效。
+
+> **Linux/Docker 部署注意（图片输出必需）**：图片模式（`output_mode=image/both`）的所有图片——九宫排盘图、合并长图、报告图——均由插件本地 Pillow 绘制，**依赖服务器上的中文字体**。请先安装 CJK 字体：
+>
+> - Debian/Ubuntu：`apt-get update && apt-get install -y fonts-noto-cjk`
+> - Alpine：`apk add --no-cache font-noto-cjk`
+>
+> 验证是否已生效：`fc-list :lang=zh`（有输出即已安装）。
+>
+> 未安装字体时，图片输出会静默跳过并在 AstrBot 日志输出警告（`no CJK font found`），消息自动回退为纯文字。**Docker 注意**：请把安装命令写进 Dockerfile（`RUN apt-get update && apt-get install -y fonts-noto-cjk`），否则重建容器会丢失字体；日常更新用 `docker restart <容器>` 即可（保留容器内已装字体）。
 
 > 本插件除 AstrBot 自身运行环境外**无额外第三方依赖**。
 
@@ -124,6 +136,8 @@ data/plugins/astrbot_plugin_qimen/
 | `enable_shiren` | 开关 | `true` | - | 启用【识人】模块，关闭后 /qm_shiren 及识人意图触发不可用，综合分析也会跳过 |
 | `enable_zhexue` | 开关 | `true` | - | 启用【哲学】模块，关闭后 /qm_zhexue 及哲学意图触发不可用，综合分析也会跳过 |
 | `enable_zeri` | 开关 | `true` | - | 启用【择日】模块，关闭后 /qm_zeri 及择吉意图触发不可用 |
+| `output_mode` | 下拉框 | `text` | `text` / `image` / `both` | 输出形态：text=纯文字；image=一张合并长图（排盘图+分隔带+报告，无排盘时仅报告图）；both=合并图+文字。图片失败自动回退纯文字 |
+| `enable_chart_image` | 开关 | `true` | - | image/both 模式下是否附九宫排盘图（择日模块无排盘图） |
 
 > 修改后保存即可，下次起局立即生效，无需重启。
 
@@ -175,6 +189,9 @@ data/plugins/astrbot_plugin_qimen/
 | `qimen_fengshui.py` | 风水模块：环境总评、吉凶方位、关键宫位、布局建议 |
 | `qimen_shiren.py` | 识人模块：性格特质、才能优势、短板不足、人际关系、适合领域 |
 | `qimen_zhexue.py` | 哲学模块：核心易理、格局之智、阴阳之道、时位之机、人生启示、经典箴言 |
+| `qimen_zeri.py` | 择日模块：按用事需求筛选吉日吉时，给出宜忌与建议 |
+| `qimen_chart.py` | 九宫排盘图绘制：Pillow 自绘玄黑金图例，含直符金框、空亡/驿马红章与底部图例 |
+| `qimen_image.py` | 图片渲染管线：报告长图渲染（宽度可配）与排盘图+报告合并长图合成 |
 | `qimen_data.py` | 奇门静态数据：九宫/八门/九星/八神/三奇六仪/节气定局表/格局/十干克应/用神表 |
 | `metadata.yaml` | AstrBot 插件元数据 |
 | `_conf_schema.json` | 插件配置项定义 |
@@ -215,4 +232,5 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ## 📜 版本
 
+- v1.1.0：新增图片化输出——九宫排盘图（Pillow 自绘，玄黑金风格，含直符/空亡/驿马标记）；排盘图与报告合并为一张长图（image 档=合并图，both=合并图+文字，无排盘时仅报告图）；报告图本地 Pillow 渲染 + 纯文本最终兜底；新增 output_mode（text/image/both）与 enable_chart_image 配置项。
 - v1.0.1：从 astrbot_plugin_liuyao 独立出来，支持命令与自然语言调用、时家奇门转盘法排盘断卦；结合《御定奇门宝鉴》《奇门法窍》《神奇之门》《开悟之门》《奇门真髓》《奇门精粹》等典籍完善--含十干克应（70+组）、六仪击刑、三奇入墓、空亡转宫、主客关系、八门旺衰、天盘干排布，扩充格局表与用神体系，完善应期推断；新增五大功能模块--预测（趋势/成败/应期/风险）、运筹（择吉方位/时机/主客策略）、风水（环境方位/吉凶布局）、识人（性格/才能/关系/用人）、哲学（易理/格局之智/人生启示）及择日模块；新增 `/qm_all` 综合分析命令；在设置页面为断卦、预测、运筹、风水、识人、哲学、择日七大模块各增加独立开关（`enable_duangua` / `enable_yuce` / `enable_yunchou` / `enable_fengshui` / `enable_shiren` / `enable_zhexue` / `enable_zeri`），可在管理面板按需启停；综合分析 `/qm_all` 自动跳过已关闭模块，并在末尾统一附一次免责声明。

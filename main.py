@@ -33,8 +33,22 @@ import qimen_shiren as QS
 import qimen_zhexue as QZ
 import qimen_zeri as QZE
 
+import time
+
+import qimen_chart as QC
+import qimen_image as QI
+
+_TEMP_DIR = os.path.join(_here, "temp")
+
+try:
+    from loguru import logger
+except ImportError:
+    import logging
+    logger = logging.getLogger("astrbot_plugin_qimen")
+
 from astrbot.api.star import Star, register
 from astrbot.api.event import filter, AstrMessageEvent
+import astrbot.api.message_components as Comp
 
 
 def _safe_call(func, *args, **kwargs):
@@ -450,7 +464,7 @@ def build_zeri_report(result, show_disclaimer=True):
     "astrbot_plugin_qimen",
     "qimen_dev",
     "奇门遁甲断卦：起局排盘，判吉凶、预测、运筹、风水、识人、哲理、择日",
-    "1.0.1",
+    "1.1.0",
     "",
 )
 class QimenPlugin(Star):
@@ -477,6 +491,60 @@ class QimenPlugin(Star):
         entry = _MODULE_SWITCH.get(module)
         name = entry[1] if entry else module
         return f"⚠️【{name}】模块已被管理员关闭，如需使用请在插件配置中开启。"
+
+    async def _send_result(self, event, report_text, pp=None, title="奇门遁甲"):
+        """按 output_mode 输出：text 纯文字 / image 一张合并图（无排盘时为报告图） / both 合并图+文。
+        图片任何环节失败自动降级，保证用户总能收到结果。
+        """
+        mode = str(self._opt("output_mode", "text")).lower()
+        if mode not in ("text", "image", "both"):
+            mode = "text"
+        if mode == "text":
+            return event.plain_result(report_text)
+
+        # 1) 九宫排盘图（仅在有排盘数据且开关开启时）
+        chart_path = None
+        if pp is not None and bool(self._opt("enable_chart_image", True)):
+            try:
+                os.makedirs(_TEMP_DIR, exist_ok=True)
+                chart_path = os.path.join(
+                    _TEMP_DIR, f"qimen_chart_{int(time.time() * 1000)}.png")
+                QC.render_paipan_chart(pp, chart_path)
+            except Exception as e:
+                logger.warning(f"九宫排盘图生成失败，已跳过：{e}")
+                chart_path = None
+        # 2) 有排盘图 → 合并图；无排盘图 → 独立报告图（本地 Pillow）
+        image_path = None
+        if chart_path:
+            try:
+                os.makedirs(_TEMP_DIR, exist_ok=True)
+                merged_path = os.path.join(
+                    _TEMP_DIR, f"qimen_merged_{int(time.time() * 1000)}.png")
+                QI.render_merged_image(chart_path, report_text, title, merged_path)
+                image_path = merged_path
+                try:
+                    os.remove(chart_path)  # 合并成功后清理中间文件
+                except OSError:
+                    pass
+            except Exception as e:
+                logger.warning(f"合并图生成失败，降级为排盘图：{e}")
+                image_path = chart_path
+        else:
+            try:
+                os.makedirs(_TEMP_DIR, exist_ok=True)
+                report_path = os.path.join(
+                    _TEMP_DIR, f"qimen_report_{int(time.time() * 1000)}.png")
+                QI.render_text_local(report_text, title, report_path)
+                image_path = report_path
+            except Exception as e:
+                logger.warning(f"报告图生成失败，已跳过：{e}")
+        # 3) 最终兜底：无图可发时回退纯文本
+        if not image_path:
+            return event.plain_result(report_text)
+        chain = [Comp.Image.fromFileSystem(image_path)]
+        if mode == "both":
+            chain.append(Comp.Plain("\n" + report_text))
+        return event.chain_result(chain)
 
     @filter.command("qimen")
     async def cmd_qimen(self, event: AstrMessageEvent):
@@ -720,7 +788,7 @@ class QimenPlugin(Star):
             pp = QP.qimen_paipan(question)
             jd = _safe_call(QG.judge, pp, style=advice_style)
             report = build_qimen_report(pp, jd, show_disclaimer=bool(show_disclaimer))
-            return event.plain_result(report)
+            return await self._send_result(event, report, pp=pp, title="奇门遁甲·断卦")
         except Exception as e:
             import traceback
             tb = traceback.format_exc()
@@ -732,7 +800,7 @@ class QimenPlugin(Star):
         try:
             result = QZE.zeri(question)
             report = build_zeri_report(result, show_disclaimer=bool(show_disclaimer))
-            return event.plain_result(report)
+            return await self._send_result(event, report, pp=None, title="奇门择日")
         except Exception as e:
             import traceback
             tb = traceback.format_exc()
@@ -773,7 +841,7 @@ class QimenPlugin(Star):
                         r = _safe_call(QZ.zhexue, pp, style=advice_style)
                         parts.append(build_zhexue_report(pp, r, show_disclaimer=part_disclaimer))
                 report = "\n\n".join(parts)
-                return event.plain_result(report)
+                return await self._send_result(event, report, pp=pp, title="奇门遁甲·综合")
             elif module == "yuce":
                 result = _safe_call(QY.yuce, pp, style=advice_style)
                 report = build_yuce_report(pp, result, show_disclaimer=bool(show_disclaimer))
@@ -791,7 +859,10 @@ class QimenPlugin(Star):
                 report = build_zhexue_report(pp, result, show_disclaimer=bool(show_disclaimer))
             else:
                 return event.plain_result(f"未知模块：{module}")
-            return event.plain_result(report)
+            _titles = {"yuce": "奇门预测", "yunchou": "奇门运筹",
+                       "fengshui": "奇门风水", "shiren": "奇门识人", "zhexue": "奇门哲理"}
+            return await self._send_result(
+                event, report, pp=pp, title=_titles.get(module, "奇门遁甲"))
         except Exception as e:
             import traceback
             tb = traceback.format_exc()
