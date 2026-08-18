@@ -53,14 +53,16 @@ data/plugins/astrbot_plugin_qimen/
 
 随后在 AstrBot 管理面板「插件管理」中重载插件，或重启 AstrBot 即可生效。
 
-> **Linux/Docker 部署注意（图片输出必需）**：图片模式（`output_mode=image/both`）的所有图片——九宫排盘图、合并长图、报告图——均由插件本地 Pillow 绘制，**依赖服务器上的中文字体**。请先安装 CJK 字体：
+> **Linux/Docker 部署注意（图片输出必需）**：图片模式（`output_mode=image/both`）的所有图片——九宫排盘图、合并长图、报告图——均由插件本地 Pillow 绘制，**依赖服务器上的中文字体**。请安装字体：
 >
-> - Debian/Ubuntu：`apt-get update && apt-get install -y fonts-noto-cjk`
-> - Alpine：`apk add --no-cache font-noto-cjk`
+> - Debian/Ubuntu：`apt-get update && apt-get install -y fonts-noto-cjk fonts-noto-color-emoji`
+> - Alpine：`apk add --no-cache font-noto-cjk font-noto-color-emoji`
 >
-> 验证是否已生效：`fc-list :lang=zh`（有输出即已安装）。
+> 其中 `fonts-noto-cjk` 是中文字体（**必需**，缺失时图片无法生成）；`fonts-noto-color-emoji` 是彩色表情字体（可选，缺失时图片中的表情符号会被自动移除以避免显示为方块）。
 >
-> 未安装字体时，图片输出会静默跳过并在 AstrBot 日志输出警告（`no CJK font found`），消息自动回退为纯文字。**Docker 注意**：请把安装命令写进 Dockerfile（`RUN apt-get update && apt-get install -y fonts-noto-cjk`），否则重建容器会丢失字体；日常更新用 `docker restart <容器>` 即可（保留容器内已装字体）。
+> 验证是否已生效：`fc-list :lang=zh`（有输出即已安装中文字体）。
+>
+> 未安装中文字体时，图片输出会静默跳过并在 AstrBot 日志输出警告（`no CJK font found`），消息自动回退为纯文字。**Docker 注意**：请把安装命令写进 Dockerfile（`RUN apt-get update && apt-get install -y fonts-noto-cjk fonts-noto-color-emoji`），否则重建容器会丢失字体；日常更新用 `docker restart <容器>` 即可（保留容器内已装字体）。
 
 > 本插件除 AstrBot 自身运行环境外**无额外第三方依赖**。
 
@@ -232,5 +234,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ## 📜 版本
 
+- v1.1.1：修复图片模式下表情符号显示为方块的问题（自动发现 emoji 字体并以彩色混排渲染，支持 COLR 矢量与 CBDT 位图；未安装 emoji 字体时自动移除表情而非显示方块）；补充服务器中文字体依赖说明与可选 emoji 字体包（fonts-noto-color-emoji）。
 - v1.1.0：新增图片化输出——九宫排盘图（Pillow 自绘，玄黑金风格，含直符/空亡/驿马标记）；排盘图与报告合并为一张长图（image 档=合并图，both=合并图+文字，无排盘时仅报告图）；报告图本地 Pillow 渲染 + 纯文本最终兜底；新增 output_mode（text/image/both）与 enable_chart_image 配置项。
 - v1.0.1：从 astrbot_plugin_liuyao 独立出来，支持命令与自然语言调用、时家奇门转盘法排盘断卦；结合《御定奇门宝鉴》《奇门法窍》《神奇之门》《开悟之门》《奇门真髓》《奇门精粹》等典籍完善--含十干克应（70+组）、六仪击刑、三奇入墓、空亡转宫、主客关系、八门旺衰、天盘干排布，扩充格局表与用神体系，完善应期推断；新增五大功能模块--预测（趋势/成败/应期/风险）、运筹（择吉方位/时机/主客策略）、风水（环境方位/吉凶布局）、识人（性格/才能/关系/用人）、哲学（易理/格局之智/人生启示）及择日模块；新增 `/qm_all` 综合分析命令；在设置页面为断卦、预测、运筹、风水、识人、哲学、择日七大模块各增加独立开关（`enable_duangua` / `enable_yuce` / `enable_yunchou` / `enable_fengshui` / `enable_shiren` / `enable_zhexue` / `enable_zeri`），可在管理面板按需启停；综合分析 `/qm_all` 自动跳过已关闭模块，并在末尾统一附一次免责声明。

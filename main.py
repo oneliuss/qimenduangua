@@ -464,7 +464,7 @@ def build_zeri_report(result, show_disclaimer=True):
     "astrbot_plugin_qimen",
     "qimen_dev",
     "奇门遁甲断卦：起局排盘，判吉凶、预测、运筹、风水、识人、哲理、择日",
-    "1.1.0",
+    "1.1.1",
     "",
 )
 class QimenPlugin(Star):
